@@ -24,7 +24,7 @@ exports.list = asyncHandler(async (req, res) => {
 exports.create = asyncHandler(async (req, res) => {
   const { name, email, password, role, phone } = req.body;
   if (role === 'super_admin' && !isSuper(req.user)) throw new ApiError(403, 'Only a Super Admin can create Super Admins');
-  const user = await User.create({ name, email, password, role, phone });
+  const user = await User.create({ name, email, password, role: 'admin', phone });
   res.status(201).json({ success: true, user });
 });
 exports.update = asyncHandler(async (req, res) => {

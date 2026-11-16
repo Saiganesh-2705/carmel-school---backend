@@ -18,8 +18,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
   next();
 });
 
-// super_admin always passes
 exports.authorize = (...roles) => (req, res, next) => {
-  if (req.user.role === 'super_admin' || roles.includes(req.user.role)) return next();
+  if (roles.includes(req.user.role)) return next();
   next(new ApiError(403, 'You do not have permission to do this'));
 };

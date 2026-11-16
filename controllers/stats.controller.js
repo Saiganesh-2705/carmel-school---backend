@@ -4,7 +4,7 @@ const Notice = require('../models/Notice');
 const asyncHandler = require('../utils/asyncHandler');
 
 exports.overview = asyncHandler(async (req, res) => {
-  const scope = req.user.role === 'super_admin' ? {} : { role: { $ne: 'super_admin' } };
+  const scope = {};
   const [byRole, total, active, newMessages, totalMessages, notices, recentMessages, recentLogins] = await Promise.all([
     User.aggregate([{ $match: scope }, { $group: { _id: '$role', count: { $sum: 1 } } }]),
     User.countDocuments(scope), User.countDocuments({ ...scope, isActive: true }),

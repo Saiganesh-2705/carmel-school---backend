@@ -54,12 +54,13 @@ app.use(errorHandler);
 const port = process.env.PORT || 5000;
 connectDB()
   .then(async () => {
+    await require('./utils/seedData').migrateToAdminOnly();
     // First run on an empty development database: create the demo accounts so you can log in immediately.
     if (!isProd) {
       const User = require('./models/User');
       if ((await User.countDocuments()) === 0) {
         await require('./utils/seedData').seedDemo();
-        console.log('Empty database detected: demo accounts created (superadmin@school.test / Password123)');
+        console.log('Empty database detected: demo accounts created (admin@school.test / Password123)');
       }
     }
     app.listen(port, () => console.log(`API listening on http://localhost:${port}`));

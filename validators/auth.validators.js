@@ -19,6 +19,6 @@ exports.forgot = [email()];
 exports.reset = [pw('password')];
 exports.change = [body('currentPassword').notEmpty(), pw('newPassword')];
 exports.profile = [body('name').optional().trim().isLength({ min: 2, max: 100 }), body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 20 })];
-exports.createUser = [body('name').trim().isLength({ min: 2, max: 100 }), email(), pw('password'), body('role').isIn(ROLES), body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 20 })];
+exports.createUser = [body('name').trim().isLength({ min: 2, max: 100 }), email(), pw('password'), body('role').optional().isIn(ROLES), body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 20 })];
 exports.updateUser = [body('name').optional().trim().isLength({ min: 2, max: 100 }), body('role').optional().isIn(ROLES), body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 20 })];
 exports.resetUserPassword = [pw('password')];
