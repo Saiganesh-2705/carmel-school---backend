@@ -1,0 +1,11 @@
+const router = require('express').Router();
+const c = require('../controllers/users.controller');
+const v = require('../validators/auth.validators');
+const { validate } = require('../middleware/error');
+const { protect, authorize } = require('../middleware/auth');
+router.use(protect, authorize('admin'));
+router.route('/').get(c.list).post(v.createUser, validate, c.create);
+router.route('/:id').put(v.updateUser, validate, c.update).delete(c.remove);
+router.patch('/:id/active', c.setActive);
+router.post('/:id/reset-password', v.resetUserPassword, validate, c.resetPassword);
+module.exports = router;
