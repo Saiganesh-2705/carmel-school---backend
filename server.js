@@ -18,10 +18,13 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 // CLIENT_URL may hold several comma-separated origins. In development ANY localhost / 127.0.0.1 port is also accepted,
 // so the site works whether Vite starts on 5173, 5174 or you open it via 127.0.0.1.
 const allowed = (process.env.CLIENT_URL || '').split(',').map((s) => s.trim().replace(/\/$/, '')).filter(Boolean);
+const vercelOrigin = /^https:\/\/[a-z0-9-]+\.vercel\.app$/;
 const localOrigin = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowed.includes(origin) || (!isProd && localOrigin.test(origin))) return cb(null, true);
+    // Allowed: no origin (mobile apps, curl), anything in CLIENT_URL, "*" in CLIENT_URL, your Vercel deployments, and localhost in development.
+    // Login uses a Bearer token (not cookies), so accepting *.vercel.app is safe and stops CORS errors on preview/alias URLs.
+    if (!origin || allowed.includes('*') || allowed.includes(origin) || vercelOrigin.test(origin) || (!isProd && localOrigin.test(origin))) return cb(null, true);
     console.warn(`CORS blocked origin ${origin}. Add it to CLIENT_URL in server/.env`);
     return cb(null, false);
   },
