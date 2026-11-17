@@ -34,18 +34,19 @@ app.use(express.json({ limit: '1mb' }));
 app.use(mongoSanitize());
 if (!isProd) app.use(morgan('dev'));
 
-app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false }));
+app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, skip: (req) => /\/images\/|\/image$/.test(req.path), standardHeaders: true, legacyHeaders: false }));
 // Only FAILED logins count towards the limit, so normal users are never locked out by their own successful sign-ins.
 app.use('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, skipSuccessfulRequests: true, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many failed attempts. Try again in 15 minutes' } }));
 app.use('/api/auth/forgot-password', rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, message: { success: false, message: 'Too many requests. Try again later' } }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // "features" lets the website check that this server is new enough (for example before uploading a notice photo).
-app.get('/api/health', (req, res) => res.json({ success: true, status: 'ok', features: ['notice-media'] }));
+app.get('/api/health', (req, res) => res.json({ success: true, status: 'ok', features: ['notice-media', 'notice-gallery', 'albums', 'albums-bulk'], storage: require('./services/cloud').enabled() ? 'cloudinary' : 'database' }));
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/users', require('./routes/users.routes'));
 app.use('/api/contact', require('./routes/contact.routes'));
 app.use('/api/notices', require('./routes/notices.routes'));
+app.use('/api/albums', require('./routes/albums.routes'));
 app.use('/api/stats', require('./routes/stats.routes'));
 // Next modules mount here: students, teachers, parents, classes, ...
 
