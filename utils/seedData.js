@@ -27,6 +27,12 @@ module.exports = { seedDemo, PASSWORD, DEMO };
 async function migrateToAdminOnly() {
   await User.collection.updateMany({ role: 'super_admin' }, { $set: { role: 'admin' } });
   const r = await User.collection.updateMany({ role: { $ne: 'admin' } }, { $set: { role: 'admin', isActive: false } });
+  // Remove the old sample notices that mentioned teachers, students and parents (only if they are still unchanged).
+  const Notice = require('../models/Notice');
+  await Notice.deleteMany({ $or: [
+    { title: 'Welcome to the Carmel portal', body: 'Teachers, students, parents and staff can now sign in to the school portal. Please keep your password private.' },
+    { title: 'Staff meeting on Friday', body: 'All teachers are requested to attend the staff meeting after school on Friday.' },
+  ] });
   if (r.modifiedCount) console.log(`Portal is now admin-only: ${r.modifiedCount} old non-admin account(s) were disabled.`);
 }
 module.exports.migrateToAdminOnly = migrateToAdminOnly;

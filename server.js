@@ -40,7 +40,8 @@ app.use('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, skip
 app.use('/api/auth/forgot-password', rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, message: { success: false, message: 'Too many requests. Try again later' } }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.get('/api/health', (req, res) => res.json({ success: true, status: 'ok' }));
+// "features" lets the website check that this server is new enough (for example before uploading a notice photo).
+app.get('/api/health', (req, res) => res.json({ success: true, status: 'ok', features: ['notice-media'] }));
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/users', require('./routes/users.routes'));
 app.use('/api/contact', require('./routes/contact.routes'));

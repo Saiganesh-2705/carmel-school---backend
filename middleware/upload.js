@@ -10,3 +10,6 @@ const storage = multer.diskStorage({
 const imageFilter = (req, file, cb) =>
   ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype) ? cb(null, true) : cb(new ApiError(400, 'Only JPG, PNG or WebP images are allowed'));
 exports.uploadPhoto = multer({ storage, fileFilter: imageFilter, limits: { fileSize: 2 * 1024 * 1024 } }).single('photo');
+
+// Notice cover image: kept in memory, then saved inside the database (3 MB max).
+exports.uploadNoticeImage = multer({ storage: multer.memoryStorage(), fileFilter: imageFilter, limits: { fileSize: 3 * 1024 * 1024 } }).single('image');
