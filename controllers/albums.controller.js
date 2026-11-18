@@ -48,12 +48,12 @@ async function applyPhotos(album, req) {
 }
 
 exports.publicList = asyncHandler(async (req, res) => {
-  const rows = await Album.find({ isPublished: true }).sort('-eventDate').limit(60).select('-author');
+  const rows = await Album.find({ isPublished: true }).sort('-eventDate -createdAt').limit(60).select('-author');
   const data = (await withPhotos(rows.map(plain))).filter((a) => a.photos.length > 0);
   res.json({ success: true, data });
 });
 exports.list = asyncHandler(async (req, res) => {
-  const rows = await Album.find({}).sort('-eventDate').limit(200).populate('author', 'name');
+  const rows = await Album.find({}).sort('-eventDate -createdAt').limit(200).populate('author', 'name');
   res.json({ success: true, data: await withPhotos(rows.map(plain)) });
 });
 exports.image = asyncHandler(async (req, res) => {
