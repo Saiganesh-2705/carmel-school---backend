@@ -15,6 +15,7 @@ const rules = (isNew) => [
 router.get('/public', c.publicList);          // school website, no login
 router.get('/:id/images/:imgId', c.image);    // photo (ids are unguessable)
 router.use(protect, authorize('admin'));
+router.get('/storage', c.storage);
 router.get('/', c.list);
 router.post('/', uploadAlbumImages, rules(true), validate, c.create);
 router.put('/:id', uploadAlbumImages, rules(false), validate, c.update);

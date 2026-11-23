@@ -13,6 +13,9 @@ function client() {
   return cl;
 }
 exports.enabled = () => !!client();
+exports.configured = configured;
+// Asks Cloudinary whether the keys work. Used by the admin "Check connection" button and `npm run check:cloud`.
+exports.ping = async () => { const c = client(); if (!c) throw new Error('Cloudinary is not ready'); await c.api.ping(); return true; };
 exports.upload = (buffer, folder) => new Promise((resolve, reject) => {
   client().uploader.upload_stream({ folder: `carmel/${folder}`, resource_type: 'image', overwrite: false }, (err, r) => (err ? reject(err) : resolve({ url: r.secure_url, publicId: r.public_id }))).end(buffer);
 });

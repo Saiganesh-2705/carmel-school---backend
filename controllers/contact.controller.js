@@ -5,8 +5,11 @@ const asyncHandler = require('../utils/asyncHandler');
 exports.create = asyncHandler(async (req, res) => {
   if (req.body.website) return res.status(201).json({ success: true }); // honeypot: bots fill this hidden field
   const { name, email, phone, subject, message } = req.body;
-  if (!email && !phone) throw new ApiError(422, 'Please give an email or a phone number so we can reply');
-  await ContactMessage.create({ name, email, phone, subject, message });
+  if (!email && !phone) throw new ApiError(422, 'Please give an email or a mobile number so we can reply');
+  const adm = subject === 'admission' && req.body.classApplying;
+  if (!adm && !message) throw new ApiError(422, 'Write a short message');
+  const extra = {}; for (const k of ['childName', 'classApplying', 'childAge', 'academicYear', 'previousSchool', 'relation', 'visitTime', 'replyVia']) if (adm && req.body[k] !== undefined && req.body[k] !== '') extra[k] = req.body[k];
+  await ContactMessage.create({ name, email, phone: phone && String(phone).replace(/[\s-]/g, ''), subject, message, ...extra });
   res.status(201).json({ success: true, message: 'Thank you. We will get back to you soon.' });
 });
 exports.list = asyncHandler(async (req, res) => {

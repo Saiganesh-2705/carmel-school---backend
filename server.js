@@ -41,18 +41,20 @@ app.use('/api/auth/forgot-password', rateLimit({ windowMs: 60 * 60 * 1000, limit
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // "features" lets the website check that this server is new enough (for example before uploading a notice photo).
-app.get('/api/health', (req, res) => res.json({ success: true, status: 'ok', features: ['notice-media', 'notice-gallery', 'albums', 'albums-bulk'], storage: require('./services/cloud').enabled() ? 'cloudinary' : 'database' }));
+app.get('/api/health', (req, res) => res.json({ success: true, status: 'ok', features: ['notice-media', 'notice-gallery', 'albums', 'albums-bulk', ...(require('./controllers/chat.controller').enabled() ? ['chat'] : [])], storage: require('./services/cloud').enabled() ? 'cloudinary' : 'database' }));
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/users', require('./routes/users.routes'));
 app.use('/api/contact', require('./routes/contact.routes'));
 app.use('/api/notices', require('./routes/notices.routes'));
 app.use('/api/albums', require('./routes/albums.routes'));
+app.use('/api/chat', require('./routes/chat.routes'));
 app.use('/api/stats', require('./routes/stats.routes'));
 // Next modules mount here: students, teachers, parents, classes, ...
 
 app.use(notFound);
 app.use(errorHandler);
 
+console.log(require('./controllers/chat.controller').enabled() ? 'Chat assistant: ON (Groq key found)' : 'Chat assistant: OFF (add GROQ_API_KEY to server/.env and restart)');
 const port = process.env.PORT || 5000;
 connectDB()
   .then(async () => {

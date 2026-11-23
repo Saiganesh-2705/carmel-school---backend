@@ -82,3 +82,11 @@ exports.remove = asyncHandler(async (req, res) => {
   await cloud.destroy(all.map((g) => g.publicId));
   res.json({ success: true, message: 'Album deleted' });
 });
+
+// Where new photos are stored, and (for Cloudinary) whether the keys really work.
+exports.storage = asyncHandler(async (req, res) => {
+  if (!cloud.configured()) return res.json({ success: true, data: { provider: 'database', ok: true, message: 'Photos are saved in MongoDB. For hundreds of photos, switch on Cloudinary (see docs/CLOUDINARY-SETUP.md).' } });
+  if (!cloud.enabled()) return res.json({ success: true, data: { provider: 'cloudinary', ok: false, message: 'Cloudinary keys are set, but the "cloudinary" package is not installed on the server. Run npm install in the server folder and restart.' } });
+  try { await cloud.ping(); res.json({ success: true, data: { provider: 'cloudinary', ok: true, message: 'Connected to Cloudinary. Albums can hold up to 500 photos.' } }); }
+  catch (e) { res.json({ success: true, data: { provider: 'cloudinary', ok: false, message: `Cloudinary refused the keys (${(e && (e.message || (e.error && e.error.message))) || 'unknown error'}). Check the cloud name, API key and API secret.` } }); }
+});
