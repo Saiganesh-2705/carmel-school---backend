@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
+const cloud = require('../services/cloud');
 const asyncHandler = require('../utils/asyncHandler');
 
 // "Remember me" unticked -> shorter session (12h) and the browser keeps the token only until the tab closes.
@@ -21,7 +22,22 @@ exports.updateProfile = asyncHandler(async (req, res) => {
   const { name, phone } = req.body;
   if (name) req.user.name = name;
   if (phone !== undefined) req.user.phone = phone;
-  if (req.file) req.user.photo = `/uploads/${req.file.filename}`;
+  if (req.file) {
+    if (cloud.enabled()) {
+      let up;
+      try { up = await cloud.upload(req.file.buffer, 'profiles'); } catch (e) { throw new ApiError(502, 'Photo storage (Cloudinary) rejected the upload. Check the Cloudinary settings on the server.'); }
+      const old = req.user.photoId;
+      req.user.photo = up.url; req.user.photoId = up.publicId;
+      if (old) await cloud.destroy([old]);
+    } else {
+      // Cloudinary is not set up: keep the old behaviour (local disk, lost when Render restarts).
+      const fs = require('fs'); const path = require('path'); const crypto = require('crypto');
+      const ext = req.file.mimetype === 'image/png' ? '.png' : req.file.mimetype === 'image/webp' ? '.webp' : '.jpg';
+      const name = crypto.randomBytes(16).toString('hex') + ext;
+      fs.writeFileSync(path.join(__dirname, '..', 'uploads', name), req.file.buffer);
+      req.user.photo = `/uploads/${name}`;
+    }
+  }
   await req.user.save();
   res.json({ success: true, user: req.user });
 });

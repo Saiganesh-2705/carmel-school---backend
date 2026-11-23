@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true, minlength: 8, select: false },
   role: { type: String, enum: ROLES, required: true, index: true },
   phone: { type: String, trim: true },
-  photo: { type: String },
+  photo: { type: String },     // Cloudinary address
+  photoId: { type: String },   // Cloudinary id, used to delete the old photo
   isActive: { type: Boolean, default: true },
   passwordChangedAt: Date,
   lastLoginAt: Date,
@@ -32,7 +33,7 @@ userSchema.methods.createResetToken = function () {
 };
 userSchema.methods.toJSON = function () {
   const o = this.toObject();
-  delete o.password; delete o.resetPasswordToken; delete o.resetPasswordExpires; delete o.__v;
+  delete o.password; delete o.photoId; delete o.resetPasswordToken; delete o.resetPasswordExpires; delete o.__v;
   return o;
 };
 module.exports = mongoose.model('User', userSchema);

@@ -19,6 +19,9 @@ exports.ping = async () => { const c = client(); if (!c) throw new Error('Cloudi
 exports.upload = (buffer, folder) => new Promise((resolve, reject) => {
   client().uploader.upload_stream({ folder: `carmel/${folder}`, resource_type: 'image', overwrite: false }, (err, r) => (err ? reject(err) : resolve({ url: r.secure_url, publicId: r.public_id }))).end(buffer);
 });
+exports.uploadWithName = (buffer, folder, publicId) => new Promise((resolve, reject) => {
+  client().uploader.upload_stream({ folder: `carmel/${folder}`, public_id: publicId, resource_type: 'image', overwrite: true, use_filename: false }, (err, r) => (err ? reject(err) : resolve({ url: r.secure_url, publicId: r.public_id }))).end(buffer);
+});
 exports.destroy = async (publicIds) => {
   const c = client(); const ids = publicIds.filter(Boolean); if (!c || !ids.length) return;
   for (let i = 0; i < ids.length; i += 100) { try { await c.api.delete_resources(ids.slice(i, i + 100)); } catch (e) { console.error('Cloudinary delete failed:', e.message); } }

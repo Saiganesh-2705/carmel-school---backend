@@ -6,15 +6,17 @@ const isAdmin = (u) => ['admin', 'super_admin'].includes(u.role);
 const pick = (b) => { const o = {}; for (const k of ['title', 'body', 'article', 'category', 'audience', 'pinned', 'isPublished']) if (b[k] !== undefined) o[k] = b[k]; return o; };
 
 const NoticeImage = require('../models/NoticeImage');
+const cloud = require('../services/cloud');
 const MAX_PHOTOS = 10;
 const LIST_HIDE = '-author -image';
 const base = (d) => { const o = d.toObject ? d.toObject() : d; o.hasArticle = !!(o.article && o.article.length); return o; };
 // Adds o.photos: a list of photo ids ('cover' is the older single image). Readers build the picture addresses from them.
 async function withPhotos(objs) {
   const list = Array.isArray(objs) ? objs : [objs];
-  const imgs = await NoticeImage.find({ notice: { $in: list.map((o) => o._id) } }).select('notice').sort('createdAt');
-  const by = {}; imgs.forEach((i) => { (by[i.notice] = by[i.notice] || []).push(String(i._id)); });
-  list.forEach((o) => { o.photos = [...(o.hasImage ? ['cover'] : []), ...(by[o._id] || [])]; o.hasImage = o.photos.length > 0; });
+  const imgs = await NoticeImage.find({ notice: { $in: list.map((o) => o._id) } }).select('notice url').sort('createdAt');
+  const by = {}; const cdn = {};
+  imgs.forEach((i) => { (by[i.notice] = by[i.notice] || []).push(String(i._id)); if (i.url) (cdn[i.notice] = cdn[i.notice] || {})[i._id] = i.url; });
+  list.forEach((o) => { o.photos = [...(o.hasImage ? ['cover'] : []), ...(by[o._id] || [])]; o.cdn = cdn[o._id] || {}; o.hasImage = o.photos.length > 0; });
   return objs;
 }
 // Lists send a short preview of the article; the full text is fetched when a reader opens it.
@@ -26,12 +28,25 @@ async function applyPhotos(doc, req) {
   const remove = parseIds(req.body.removeImages);
   if (remove.includes('cover')) { doc.image = undefined; doc.hasImage = false; }
   const ids = remove.filter((x) => /^[a-f\d]{24}$/i.test(x));
-  if (ids.length) await NoticeImage.deleteMany({ notice: doc._id, _id: { $in: ids } });
+  if (ids.length) {
+    const gone = await NoticeImage.find({ notice: doc._id, _id: { $in: ids } }).select('publicId');
+    await NoticeImage.deleteMany({ notice: doc._id, _id: { $in: ids } });
+    await cloud.destroy(gone.map((g) => g.publicId));
+  }
   const files = req.files || [];
   if (files.length) {
     const have = (doc.hasImage ? 1 : 0) + (await NoticeImage.countDocuments({ notice: doc._id }));
     if (have + files.length > MAX_PHOTOS) throw new ApiError(400, `A notice can have up to ${MAX_PHOTOS} photos`);
-    await NoticeImage.insertMany(files.map((f) => ({ notice: doc._id, data: f.buffer, contentType: f.mimetype })));
+    if (cloud.enabled()) {
+      const out = new Array(files.length); let next = 0;
+      const worker = async () => { while (next < files.length) { const n = next++; out[n] = await cloud.upload(files[n].buffer, `notices/${doc._id}`); } };
+      try { await Promise.all([worker(), worker(), worker()]); }
+      catch (e) { await cloud.destroy(out.filter(Boolean).map((o) => o.publicId)); throw new ApiError(502, 'Photo storage (Cloudinary) rejected the upload. Check the Cloudinary settings on the server.'); }
+      const t0 = Date.now();
+      await NoticeImage.insertMany(out.map((o, n) => ({ notice: doc._id, url: o.url, publicId: o.publicId, createdAt: new Date(t0 + n) })), { timestamps: false });
+    } else {
+      await NoticeImage.insertMany(files.map((f) => ({ notice: doc._id, data: f.buffer, contentType: f.mimetype })));
+    }
   }
 }
 
@@ -53,6 +68,7 @@ exports.image = asyncHandler(async (req, res) => {
 exports.imageById = asyncHandler(async (req, res) => {
   const img = await NoticeImage.findOne({ _id: req.params.imgId, notice: req.params.id }).select('+data +contentType');
   if (!img) throw new ApiError(404, 'No image');
+  if (img.url) return res.redirect(301, img.url);
   sendImage(res, img.data, img.contentType);
 });
 exports.list = asyncHandler(async (req, res) => {
@@ -74,6 +90,8 @@ exports.update = asyncHandler(async (req, res) => {
 exports.remove = asyncHandler(async (req, res) => {
   const data = await Notice.findByIdAndDelete(req.params.id);
   if (!data) throw new ApiError(404, 'Notice not found');
+  const all = await NoticeImage.find({ notice: data._id }).select('publicId');
   await NoticeImage.deleteMany({ notice: data._id });
+  await cloud.destroy(all.map((g) => g.publicId));
   res.json({ success: true, message: 'Notice deleted' });
 });
